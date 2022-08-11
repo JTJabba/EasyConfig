@@ -3,8 +3,15 @@
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<IncludeBuildOutput>false</IncludeBuildOutput>
 		<!-- Do not include the generator as a lib dependency -->
+		<IncludeBuildOutput>false</IncludeBuildOutput>
+		<PackageId>JTJabba.EasyConfig</PackageId>
+		<Title>JTJabba.EasyConfig</Title>
+		<Version>1.0.0</Version>
+		<Authors>JTJabba</Authors>
+		<ProjectUrl>https://github.com/JTJabba/EasyConfig</ProjectUrl>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<Description>Automatically generates static classes for accessing json configs</Description>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -25,20 +32,21 @@
 
 		<!--The whole dependancy tree for the generator needs to be manually packaged too...
 	  Sub-dependancies should be private sense any runtime sub-dependancies will be automatically handled-->
-		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="6.0.0" PrivateAssets="true" GeneratePathProperty="true" />
-		<PackageReference Include="Microsoft.Extensions.Primitives" Version="6.0.0" PrivateAssets="true" GeneratePathProperty="true" />
-		<PackageReference Include="System.Memory" Version="4.5.4" PrivateAssets="true" GeneratePathProperty="true" />
-		<PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" PrivateAssets="true" GeneratePathProperty="true" />
-		<PackageReference Include="System.Buffers" Version="4.5.1" PrivateAssets="true" GeneratePathProperty="true" />
-		<PackageReference Include="System.Numerics.Vectors" Version="4.5.0" PrivateAssets="true" GeneratePathProperty="true" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="6.0.0" PrivateAssets="true" GeneratePathProperty="true" />
-		<PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" Version="6.0.0" PrivateAssets="true" GeneratePathProperty="true" />
-		<PackageReference Include="Microsoft.Extensions.FileProviders.Physical" Version="6.0.0" PrivateAssets="true" GeneratePathProperty="true" />
-		<PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="6.0.0" PrivateAssets="true" GeneratePathProperty="true" />
-		<PackageReference Include="System.Text.Json" Version="6.0.0" PrivateAssets="true" GeneratePathProperty="true" />
-		<PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="6.0.0" PrivateAssets="true" GeneratePathProperty="true" />
-		<PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" PrivateAssets="true" GeneratePathProperty="true" />
-		<PackageReference Include="System.Text.Encodings.Web" Version="6.0.0" PrivateAssets="true" GeneratePathProperty="true" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="6.0.0" PrivateAssets="all" GeneratePathProperty="true" />
+		<PackageReference Include="Microsoft.Extensions.Primitives" Version="6.0.0" PrivateAssets="all" GeneratePathProperty="true" />
+		<PackageReference Include="System.Memory" Version="4.5.4" PrivateAssets="all" GeneratePathProperty="true" />
+		<PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" PrivateAssets="all" GeneratePathProperty="true" />
+		<PackageReference Include="System.Buffers" Version="4.5.1" PrivateAssets="all" GeneratePathProperty="true" />
+		<PackageReference Include="System.Numerics.Vectors" Version="4.5.0" PrivateAssets="all" GeneratePathProperty="true" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="6.0.0" PrivateAssets="all" GeneratePathProperty="true" />
+		<PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" Version="6.0.0" PrivateAssets="all" GeneratePathProperty="true" />
+		<PackageReference Include="Microsoft.Extensions.FileProviders.Physical" Version="6.0.0" PrivateAssets="all" GeneratePathProperty="true" />
+		<PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="6.0.0" PrivateAssets="all" GeneratePathProperty="true" />
+		<PackageReference Include="System.Text.Json" Version="6.0.0" PrivateAssets="all" GeneratePathProperty="true" />
+		<PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="6.0.0" PrivateAssets="all" GeneratePathProperty="true"  />
+		<PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" PrivateAssets="all" GeneratePathProperty="true" />
+		<PackageReference Include="System.Text.Encodings.Web" Version="6.0.0" PrivateAssets="all" GeneratePathProperty="true" />
+		<PackageReference Include="System.Text.Encodings.Web" Version="6.0.0" PrivateAssets="all" GeneratePathProperty="true" />
 
 		<!-- Package the generator in the analyzer directory of the nuget package -->
 		<None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
