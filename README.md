@@ -1,7 +1,9 @@
 # EasyConfig
 Source generator that automatically generates static classes for accessing json configs.
-
-## How to use
+- [How to Use](#how-to-use)
+- [Generated Code](#generated-code)
+- [Limitations](#limitations)
+## How to Use
 
 ### Step 1 - Install
 Build a package from source or install JTJabba.EasyConfig from nuget.org.
@@ -104,7 +106,8 @@ For the given project:
   }
 }
 ```
-EasyConfig will generate the 2 following files, viewable under Dependancies->Analyzers->EasyConfig->JTJabba.EasyConfig.ConfigGenerator:
+
+EasyConfig will generate the following two files, viewable under Dependancies->Analyzers->EasyConfig->JTJabba.EasyConfig.ConfigGenerator:
 ```csharp
 namespace JTJabba.EasyConfig
 {
