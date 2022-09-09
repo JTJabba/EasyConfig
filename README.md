@@ -6,48 +6,81 @@ Source generator that automatically generates static classes for accessing json 
 ### Step 1 - Install
 Build a package from source or install JTJabba.EasyConfig from nuget.org.
 
-### Step 2 - Add config files to csproj file
-**Example 1:**
+### Step 2 - Add config files and templates to csproj file
+- Currently only Json files are supported.
+- These files will be directly loaded unless they are marked as templates by including ```template``` in their name.
+- Template files should contain an example json config containing values EasyConfig expects to be findable somewhere else on run.
+- Do not include paths to files not accessible on compilation. Add templates to generate a structure for their values and see Step 3.
 ```xml
 <ItemGroup>
     <AdditionalFiles Include="appsettings.json" />
+    <AdditionalFiles Include="template.secrets.json" />
 </ItemGroup>
 ```
 
-**Example 2 (docker):**
-```xml
-<ItemGroup>
-    <AdditionalFiles Include="/app/appsettings.json" />
-    <AdditionalFiles Include="/run/secrets/secrets.json" />
-</ItemGroup>
-```
-
-### Step 3 - Load at start of program
+### Step 3 - Load config at start of program
+Make a call to ConfigLoader.Load. Paths to config files not included in AdditionalFiles can be passed as a string array, a manually created IConfiguration can be loaded, or file paths can be specified in the environment variable ```EasyConfigFiles``` as a comma-delimited string.
+Duplicate values are overwritten as higher-priority files are loaded. The load order (lowest to highest priority) is AdditionalFiles, file paths passed to Load(), then file paths in an ```EasyConfigFiles``` environment variable.
 ```csharp
 using JTJabba.EasyConfig.Loader;
+
+// METHOD 1
+// Only load non-template files included in AdditionalFiles then any files specified in an EasyConfigFiles environment variable.
 ConfigLoader.Load();
+
+// METHOD 2
+// Load non-template files included in AdditionalFiles, then matching config values from passed in files, then any files specified in an EasyConfigFiles environment variable.
+var otherFiles = new string[] { "/run/secrets/secrets.json" };
+ConfigLoader.Load(otherFiles);
+
+// METHOD 3
+// Load a user provided IConfiguration. Environment variable EasyConfigFiles is ignored.
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.Json;
+var myConfig = new ConfigurationBuilder()
+    .AddJsonFile(@"appsettings.json")
+    .AddJsonFile(@"/run/secrets/secrets.json")
+    .Build();
+ConfigLoader.Load(myConfig);
 ```
 
 ### Step 4 - Access config values
 ```csharp
 using JTJabba.EasyConfig;
+
+// ACCESS BASIC PROPERTY
 var mySetting = Config.Path.To.Setting;
+
+// QUERY OBJECT ARRAY
+// Get list of subnets for an object in an object array where its RegionName = regionName
+var myRegion = "us-east-1";
+var myRegionsSubnets = Config.AWS.Regions.Where(x => x.RegionName == regionName).First().Subnets.ToList();
 ```
 
 ## Generated code
-For the given .json included in a project:
+For the given project:
+```xml
+// Somewhere in .csproj file
+<ItemGroup>
+    <PackageReference Include="JTJabba.EasyConfig" Version="1.0.0" />
+    <AdditionalFiles Include="appsettings.json" />
+    <AdditionalFiles Include="secrets.template.json" />
+</ItemGroup>
+```
 ```json
+// appsettings.json
 {
   "Listening_Port": 12345,
   "Max_Parallel_Reservations": 20,
   "Reservation_Timeout_Minutes": 90,
   "Enable_Timeout": true,
   "Cert_Path": "/run/secrets/MyCert.pfx",
-  "EC2Config": {
+  "AWS": {
     "Ami": "ami-123456789abcdef00",
     "Cache_Timeout": 300,
-    "Region_Configs": {
-      "us-east-1": {
+    "Regions": [
+      {
+        "RegionName": "us-east-1",
         "Security_Groups": [
           "sg-123456789abcdef00"
         ],
@@ -57,7 +90,17 @@ For the given .json included in a project:
           "subnet-123456789abcdef02"
         ]
       }
-    }
+    ]
+  }
+}
+```
+```json
+// template.secrets.json
+{
+  "Secrets": {
+    "Cert_Import_Key": "",
+    "AWS_Access_Key": "",
+    "AWS_Secret_Key": ""
   }
 }
 ```
@@ -67,32 +110,29 @@ namespace JTJabba.EasyConfig
 {
     public static class Config
     {
-        public static int Reservation_Timeout_Minutes;
-        public static int Max_Parallel_Reservations;
-        public static class Logging
+        public static class Secrets
         {
-            public static class LogLevel
-            {
-                public static string Microsoft_Hosting_Lifetime;
-                public static string Default;
-            }
+            public static string Cert_Import_Key { get; set; }
+            public static string AWS_Secret_Key { get; set; }
+            public static string AWS_Access_Key { get; set; }
         }
-        public static int Listening_Port;
-        public static bool Enable_Timeout;
-        public static class EC2Config
+        public static int Reservation_Timeout_Minutes { get; set; }
+        public static int Max_Parallel_Reservations { get; set; }
+        public static int Listening_Port { get; set; }
+        public static bool Enable_Timeout { get; set; }
+        public static string Cert_Path { get; set; }
+        public static class AWS
         {
-            public static class Region_Configs
+            public class RegionsObject
             {
-                public static class us_east_1
-                {
-                    public static string[] Subnets;
-                    public static string[] Security_Groups;
-                }
+                public string[] Subnets { get; set; }
+                public string[] Security_Groups { get; set; }
+                public string RegionName { get; set; }
             }
-            public static int Cache_Timeout;
-            public static string Ami;
+            public static List<RegionsObject> Regions { get; set; } = new();
+            public static int Cache_Timeout { get; set; }
+            public static string Ami { get; set; }
         }
-        public static string Cert_Path;
     }
 }
 ```
@@ -104,24 +144,49 @@ namespace JTJabba.EasyConfig.Loader
 {
     public static class ConfigLoader
     {
-        public static void Load()
+        /// <summary>
+        /// Attempts to load files included in AdditionalFiles, then any additional files provided, then files in environment variable 'EasyConfigFiles'.
+        /// Duplicate values will be overwritten.
+        /// </summary>
+        public static void Load(string[]? additionalConfigFiles = null)
         {
-            IConfiguration config = new ConfigurationBuilder()
-                .AddJsonFile(@"Path\To\Project\appsettings.Development.json")
-                .AddJsonFile(@"Path\To\Project\appsettings.json")
-                .Build();
+            var configBuilder = new ConfigurationBuilder();
+            configBuilder.AddJsonFile(@"Path\To\Project\appsettings.json");
+            if (additionalConfigFiles != null)
+                foreach (var filePath in additionalConfigFiles)
+                    if (filePath.EndsWith(".json"))
+                        configBuilder.AddJsonFile(filePath);
+            var env = Environment.GetEnvironmentVariable("EasyConfigFiles")?.Split(',');
+            if (env != null)
+                foreach (var filePath in env)
+                    if (filePath.EndsWith(".json"))
+                        configBuilder.AddJsonFile(filePath);
+            Load(configBuilder.Build());
+        }
+        /// <summary>
+        /// Attempts to only load the passed configuration.
+        /// </summary>
+        public static void Load(IConfiguration config)
+        {
+            Config.Secrets.Cert_Import_Key = config.GetValue<string>("Secrets:Cert_Import_Key");
+            Config.Secrets.AWS_Secret_Key = config.GetValue<string>("Secrets:AWS_Secret_Key");
+            Config.Secrets.AWS_Access_Key = config.GetValue<string>("Secrets:AWS_Access_Key");
             Config.Reservation_Timeout_Minutes = config.GetValue<int>("Reservation_Timeout_Minutes");
             Config.Max_Parallel_Reservations = config.GetValue<int>("Max_Parallel_Reservations");
-            Config.Logging.LogLevel.Microsoft_Hosting_Lifetime = config.GetValue<string>("Logging:LogLevel:Microsoft.Hosting.Lifetime");
-            Config.Logging.LogLevel.Default = config.GetValue<string>("Logging:LogLevel:Default");
             Config.Listening_Port = config.GetValue<int>("Listening_Port");
             Config.Enable_Timeout = config.GetValue<bool>("Enable_Timeout");
-            Config.EC2Config.Region_Configs.us_east_1.Subnets = config.GetSection("EC2Config:Region_Configs:us-east-1:Subnets").Get<string[]>();
-            Config.EC2Config.Region_Configs.us_east_1.Security_Groups = config.GetSection("EC2Config:Region_Configs:us-east-1:Security_Groups").Get<string[]>();
-            Config.EC2Config.Cache_Timeout = config.GetValue<int>("EC2Config:Cache_Timeout");
-            Config.EC2Config.Ami = config.GetValue<string>("EC2Config:Ami");
             Config.Cert_Path = config.GetValue<string>("Cert_Path");
+            foreach (var item in config.GetSection("AWS:Regions").GetChildren())
+                Config.AWS.Regions.Add(item.Get<Config.AWS.RegionsObject>());
+            Config.AWS.Cache_Timeout = config.GetValue<int>("AWS:Cache_Timeout");
+            Config.AWS.Ami = config.GetValue<string>("AWS:Ami");
         }
     }
 }
 ```
+## Limitations
+- Only object and string arrays are supported.
+- Objects in an object array cannot contain another nested object array.
+- Type guessing - generator will assume types - Ex. if you want floats supported for a type after compilation you'd have to compile it with the type in float form.
+- Objects in object arrays can contain fields not in other objects, but one type is created for the entire array with all the fields it saw and identical fields must have matching types.
+- Invalid nodes are ignored and won't raise any warnings.
