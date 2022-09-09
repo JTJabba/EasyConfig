@@ -14,6 +14,7 @@
 		<Description>Automatically generates static classes for accessing json configs</Description>
 		<PackageProjectUrl>https://github.com/JTJabba/EasyConfig</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/JTJabba/EasyConfig</RepositoryUrl>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -52,6 +53,10 @@
 
 		<!-- Package the generator in the analyzer directory of the nuget package -->
 		<None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+		<None Include="..\README.md">
+		  <Pack>True</Pack>
+		  <PackagePath>\</PackagePath>
+		</None>
 
 		<!-- Package the generator dependencies alongside the generator assembly. Prepend Pkg and replace '.' with '_' for path property.
 	  Start with 'Include="$(Pkg)', paste package, and find and replace (?<=Include="\$\(Pkg|\G)([^)(\.]*)\.(?=[^)(]*\)) with $1_"-->
