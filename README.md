@@ -6,7 +6,12 @@ Source generator that automatically generates static classes for accessing json 
 ## How to Use
 
 ### Step 1 - Install
-Build a package from source or install JTJabba.EasyConfig from nuget.org.
+Add a package reference to your project. The package is available on Nuget or you can build from source.
+```xml
+<ItemGroup>
+	<PackageReference Include="JTJabba.EasyConfig" Version="1.0.0" />
+</ItemGroup>
+```
 
 ### Step 2 - Add config files and templates to csproj file
 - Currently only Json files are supported.
