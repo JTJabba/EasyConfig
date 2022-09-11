@@ -145,6 +145,7 @@ namespace JTJabba.EasyConfig
 }
 ```
 ```csharp
+\#nullable enable
 using JTJabba.EasyConfig;
 using Microsoft.Extensions.Configuration;
 
@@ -152,6 +153,22 @@ namespace JTJabba.EasyConfig.Loader
 {
     public static class ConfigLoader
     {
+        public delegate void OnFirstStaticLoadCallback();
+        private static event OnFirstStaticLoadCallback? OnFirstStaticLoadEvent;
+        private static object FirstStaticLoadCompletedLock = new Object();
+        private static bool FirstStaticLoadCompleted = false;
+        /// <summary>
+        /// Will attempt to add a void returning callback with no parameters to an event called after the first load completes.
+        /// If the first load is completed the callback will be called immediately. This method is threadsafe.
+        /// </summary>
+        public static void AddOnFirstStaticLoadCallback(OnFirstStaticLoadCallback callback)
+        {
+            lock (FirstStaticLoadCompletedLock)
+            {
+                if (FirstStaticLoadCompleted) callback();
+                else OnFirstStaticLoadEvent += callback;
+            }
+        }
         /// <summary>
         /// Attempts to load files included in AdditionalFiles, then any additional files provided, then files in environment variable 'EasyConfigFiles'.
         /// Duplicate values will be overwritten.
@@ -188,13 +205,21 @@ namespace JTJabba.EasyConfig.Loader
                 Config.AWS.Regions.Add(item.Get<Config.AWS.RegionsObject>());
             Config.AWS.Cache_Timeout = config.GetValue<int>("AWS:Cache_Timeout");
             Config.AWS.Ami = config.GetValue<string>("AWS:Ami");
+            lock (FirstStaticLoadCompletedLock)
+            {
+                FirstStaticLoadCompleted = true;
+            }
+            OnFirstStaticLoadEvent?.Invoke();
+            OnFirstStaticLoadEvent = null; // Remove hanging references
         }
     }
 }
 ```
 ## Limitations
-- Only object and string arrays are supported.
-- Objects in an object array cannot contain another nested object array.
-- Type guessing - generator will assume types - Ex. if you want floats supported for a type after compilation you'd have to compile it with the type in float form.
+- No support yet for loading config into an object (high priority).
+- Thread safety isn't implemented and properties aren't locked if config is reloaded.
+- Only arrays of objects and string are supported.
+- Objects in an object array cannot contain nested objects or object arrays.
+- Generator assumes types - Ex. if you want floats supported for a type after compilation you'd have to compile it with the type in float form.
 - Objects in object arrays can contain fields not in other objects, but one type is created for the entire array with all the fields it saw and identical fields must have matching types.
 - Invalid nodes are ignored and won't raise any warnings.

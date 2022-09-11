@@ -46,19 +46,36 @@ namespace JTJabba.EasyConfig
             IConfiguration config = configBuilder.Build();
 
             configLoaderSB.Append(
-$@"using JTJabba.EasyConfig;
+@"#nullable enable
+using JTJabba.EasyConfig;
 using Microsoft.Extensions.Configuration;
 
 namespace JTJabba.EasyConfig.Loader
-{{
+{
     public static class ConfigLoader
-    {{
+    {
+        public delegate void OnFirstStaticLoadCallback();
+        private static event OnFirstStaticLoadCallback? OnFirstStaticLoadEvent;
+        private static object FirstStaticLoadCompletedLock = new Object();
+        private static bool FirstStaticLoadCompleted = false;
+        /// <summary>
+        /// Will attempt to add a void returning callback with no parameters to an event invoked after the first load completes.
+        /// If the first load is completed the callback will be invoked immediately. This method is threadsafe.
+        /// </summary>
+        public static void AddOnFirstStaticLoadCallback(OnFirstStaticLoadCallback callback)
+        {
+            lock (FirstStaticLoadCompletedLock)
+            {
+                if (FirstStaticLoadCompleted) callback();
+                else OnFirstStaticLoadEvent += callback;
+            }
+        }
         /// <summary>
         /// Attempts to load files included in AdditionalFiles, then any additional files provided, then files in environment variable 'EasyConfigFiles'.
         /// Duplicate values will be overwritten.
         /// </summary>
         public static void Load(string[]? additionalConfigFiles = null)
-        {{
+        {
             var configBuilder = new ConfigurationBuilder();");
             foreach (var configFile in configFiles)
             {
@@ -66,7 +83,7 @@ namespace JTJabba.EasyConfig.Loader
                     configLoaderSB.Append($@"
             configBuilder.AddJsonFile(@""{configFile}"");");
             }
-            configLoaderSB.Append($@"
+            configLoaderSB.Append(@"
             if (additionalConfigFiles != null)
                 foreach (var filePath in additionalConfigFiles)
                     if (filePath.EndsWith("".json""))
@@ -77,18 +94,18 @@ namespace JTJabba.EasyConfig.Loader
                     if (filePath.EndsWith("".json""))
                         configBuilder.AddJsonFile(filePath);
             Load(configBuilder.Build());
-        }}
+        }
         /// <summary>
         /// Attempts to only load the passed configuration.
         /// </summary>
         public static void Load(IConfiguration config)
-        {{");
+        {");
 
             configSB.Append(
-$@"namespace JTJabba.EasyConfig
-{{
+@"namespace JTJabba.EasyConfig
+{
     public static class Config
-    {{");
+    {");
 
             foreach (var node in config.AsEnumerable())
             {
@@ -96,6 +113,14 @@ $@"namespace JTJabba.EasyConfig
                 AddNodeToConfigSB(config, node.Key, nodeType);
                 AddNodeToConfigLoaderSB(node.Key, nodeType);
             }
+
+            configLoaderSB.Append(@"
+            lock (FirstStaticLoadCompletedLock)
+            {
+                FirstStaticLoadCompleted = true;
+            }
+            OnFirstStaticLoadEvent?.Invoke();
+            OnFirstStaticLoadEvent = null; // Remove hanging references");
 
             ReduceIndent(12, 0, configLoaderSB);
             context.AddSource("ConfigLoader.g.cs", configLoaderSB.ToString());
