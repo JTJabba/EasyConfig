@@ -9,7 +9,7 @@ Source generator that automatically generates static classes for accessing json 
 Add a package reference to your project. The package is available on Nuget or you can build from source.
 ```xml
 <ItemGroup>
-	<PackageReference Include="JTJabba.EasyConfig" Version="1.0.0" />
+    <PackageReference Include="JTJabba.EasyConfig" Version="1.0.0" />
 </ItemGroup>
 ```
 
