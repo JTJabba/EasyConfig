@@ -16,6 +16,8 @@
 		<PackageProjectUrl>https://github.com/JTJabba/EasyConfig</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/JTJabba/EasyConfig</RepositoryUrl>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageReleaseNotes>$([System.IO.File]::ReadAllText("$(MSBuildProjectDirectory)/RELEASE-NOTES-LATEST.txt"))</PackageReleaseNotes>
+
 	</PropertyGroup>
 
 	<ItemGroup>

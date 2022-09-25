@@ -1,0 +1,7 @@
+﻿v1.1.0
+- Added method AddOnFirstStaticLoadCallback for adding delegates to be invoked if/when ConfigLoader.Load() has completed.
+- Added support for numbers in config keys after the first character.
+- Added diagnostic for warning about invalid nodes.
+
+v.1.0.0
+- Initial release.

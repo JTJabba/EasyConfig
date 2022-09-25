@@ -1,12 +1,10 @@
-﻿using System;
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Configuration;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.IO;
-using System.Threading;
 
 namespace JTJabba.EasyConfig
 {
@@ -136,7 +134,7 @@ namespace JTJabba.EasyConfig.Loader
             {
                 var nodeType = GetNodeType(config, node);
                 Debug.WriteLine("Handling node");
-                Debug.WriteLine($"  Key:   {node.Key}");
+                Debug.WriteLine($"  Key:  {node.Key}");
                 Debug.WriteLine($"  Type: {nodeType}");
                 AddNodeToConfigSB(config, node.Key, nodeType);
                 AddNodeToConfigLoaderSB(node.Key, nodeType);
