@@ -20,7 +20,8 @@ Add a package reference to your project. The package is available on Nuget or yo
 - Do not include paths to files not accessible on compilation. Add templates to generate a structure for their values and see Step 3.
 ```xml
 <ItemGroup>
-    <AdditionalFiles Include="appsettings.json" />
+    <!-- IMPORTANT: MSBuild now recognizes these as analyzer files, and will not copy them to the output directory unless specified-->
+    <AdditionalFiles Include="appsettings.json" CopyToOutputDirectory="Always" />
     <AdditionalFiles Include="template.secrets.json" />
 </ItemGroup>
 ```
@@ -145,7 +146,7 @@ namespace JTJabba.EasyConfig
 }
 ```
 ```csharp
-\#nullable enable
+#nullable enable
 using JTJabba.EasyConfig;
 using Microsoft.Extensions.Configuration;
 
@@ -219,7 +220,7 @@ namespace JTJabba.EasyConfig.Loader
 - No support yet for loading config into an object (high priority).
 - Thread safety isn't implemented and properties aren't locked if config is reloaded.
 - Only arrays of objects and string are supported.
+- Keys must not begin with a number, and only contain alphanumerics, periods, dashes, underscores, and spaces.
 - Objects in an object array cannot contain nested objects or object arrays.
 - Generator assumes types - Ex. if you want floats supported for a type after compilation you'd have to compile it with the type in float form.
 - Objects in object arrays can contain fields not in other objects, but one type is created for the entire array with all the fields it saw and identical fields must have matching types.
-- Invalid nodes are ignored and won't raise any warnings.

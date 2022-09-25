@@ -1,19 +1,31 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using System;
+using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Configuration;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.IO;
+using System.Threading;
 
 namespace JTJabba.EasyConfig
 {
     [Generator]
-    internal class ConfigGenerator : ISourceGenerator
+    internal sealed class ConfigGenerator : ISourceGenerator
     {
+        private static readonly DiagnosticDescriptor InvalidNodeWarning = new DiagnosticDescriptor(
+            id: "EZCONF001",
+            title: "Invalid node",
+            messageFormat: "Invalid node '{0}'",
+            category: "EasyConfig",
+            DiagnosticSeverity.Warning,
+            isEnabledByDefault: true);
+
         // StringBuilders need to be cleared every time source is added.
         // Shouldn't be stateful but oh well.
-        private StringBuilder configSB = new StringBuilder();
-        private StringBuilder configLoaderSB = new StringBuilder();
+        private readonly StringBuilder configSB = new StringBuilder();
+        private readonly StringBuilder configLoaderSB = new StringBuilder();
+        private GeneratorExecutionContext Context;
         private int configIndentLength = 0;
 
         private enum NodeType : ushort
@@ -28,10 +40,22 @@ namespace JTJabba.EasyConfig
             Bool,
             String
         }
+        public void Initialize(GeneratorInitializationContext context)
+        {
+#if DEBUG
+            if (!Debugger.IsAttached)
+            {
+                Debugger.Launch();
+            }
+#endif 
+            Debug.WriteLine("Initialized code generator");
+        }
+
         public void Execute(GeneratorExecutionContext context)
         {
+            Context = context;
             var configFiles =
-                from file in context.AdditionalFiles
+                from file in Context.AdditionalFiles
                 where file.Path.EndsWith(".json")
                 select file.Path;
             if (!configFiles.Any())
@@ -43,6 +67,7 @@ namespace JTJabba.EasyConfig
                 if (File.Exists(configFile))
                     configBuilder.AddJsonFile(configFile);
             }
+            Debug.WriteLine("Building config");
             IConfiguration config = configBuilder.Build();
 
             configLoaderSB.Append(
@@ -110,6 +135,9 @@ namespace JTJabba.EasyConfig.Loader
             foreach (var node in config.AsEnumerable())
             {
                 var nodeType = GetNodeType(config, node);
+                Debug.WriteLine("Handling node");
+                Debug.WriteLine($"  Key:   {node.Key}");
+                Debug.WriteLine($"  Type: {nodeType}");
                 AddNodeToConfigSB(config, node.Key, nodeType);
                 AddNodeToConfigLoaderSB(node.Key, nodeType);
             }
@@ -130,10 +158,6 @@ namespace JTJabba.EasyConfig.Loader
             configSB.Clear();
             configLoaderSB.Clear();
             configIndentLength = 0;
-        }
-        public void Initialize(GeneratorInitializationContext context)
-        {
-
         }
         void AddNodeToConfigSB(IConfiguration config, string nodeKey, NodeType nodeType, bool isStatic = true)
         {
@@ -274,8 +298,10 @@ namespace JTJabba.EasyConfig.Loader
         static NodeType GetNodeType(IConfiguration config, KeyValuePair<string, string> node)
         {
             // Check if ArrayMember
-            if (node.Key.Any(char.IsDigit))
-                return NodeType.ArrayMember;
+            for (int i = 1; i < node.Key.Length; i++)
+                if (char.IsNumber(node.Key[i]) &&
+                    node.Key[i - 1] == ':')
+                    return NodeType.ArrayMember;
 
             // Handle cases where nested values
             if (node.Value == null)
@@ -303,9 +329,9 @@ namespace JTJabba.EasyConfig.Loader
 
             return NodeType.String;
         }
-        static void HandleInvalidNode(string key)
+        void HandleInvalidNode(string key)
         {
-
+            Context.ReportDiagnostic(Diagnostic.Create(InvalidNodeWarning, Location.None, key));
         }
     }
 }
